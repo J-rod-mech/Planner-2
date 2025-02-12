@@ -19,71 +19,6 @@ public class GoalManager {
     final static String DEL_SUCCESS = "Goal %s removed.";
     final static String DEL_ERROR = "Goal %s does not exist.";
 
-    public static int getGoalData(String tag, int field) {
-        File myObj = new File(directory + "\\goaldata.txt");
-        Scanner fileSC = null;
-        Scanner lineSC = null;
-        String out = "";
-
-        try {
-            fileSC = new Scanner(myObj).useDelimiter(tag + DELIM);
-            fileSC.next();
-            lineSC = new Scanner(fileSC.next());
-            while (field > 0) {
-                out = lineSC.next();
-                field--;
-            }
-            System.out.println();
-        }
-        catch (Exception e) {
-            System.out.println(tag + " not found.");
-            System.out.println(); 
-        }
-        finally {
-            if (lineSC != null) lineSC.close();
-            if (fileSC != null) fileSC.close();
-        }
-
-        return Integer.parseInt(out);
-    }
-    
-    public static void printGoal(String task) {
-        File myObj = new File(directory + "\\goaldata.txt");
-        Scanner fileSC = null;
-        Scanner taskSC = null;
-        try {
-            fileSC = new Scanner(myObj).useDelimiter(DELIM + task + DELIM);
-            fileSC.next();
-            taskSC = new Scanner(fileSC.next());
-            String date = taskSC.next();
-            String currStreak = taskSC.next();
-
-            System.out.print("Current streak: ");
-            if (ChronoUnit.DAYS.between(LocalDate.parse(date, myFormat),
-                    ZonedDateTime.now(ZoneId.of(timeZone)).toLocalDate()) <= 1) {
-                System.out.println(currStreak);
-            }
-            else {
-                System.out.println(0);
-            }
-            System.out.println("Longest streak: " + taskSC.next());
-            System.out.println("Hours completed: " + Double.parseDouble(taskSC.next()) / 4);
-            if (!date.equals("01-01-0001")) {
-                System.out.println("Last completed: " + date);
-            }
-
-            System.out.println();
-        }
-        catch (Exception e) {
-            System.out.println(task + " not found.");
-            System.out.println(); 
-        }
-        finally {
-            if (taskSC != null) taskSC.close();
-            if (fileSC != null) fileSC.close();
-        }
-    }
-
     public static void printGoalData() {
         File myObj = new File(directory + "\\goaldata.txt");
         Scanner fileSC = null;
@@ -95,13 +30,14 @@ public class GoalManager {
                 taskSC = new Scanner(fileSC.next());
                 String name = taskSC.next();
                 int len = name.length();
-                System.out.println(name.substring(2, len - 2) + ":");
+                int freq = Integer.parseInt(taskSC.next());
+                System.out.println(name.substring(2, len - 2) + " (every" + (freq == 1 ? "day": " " + freq + " days") + "):");
                 String date = taskSC.next();
                 String currStreak = taskSC.next();
 
                 System.out.print("Current streak: ");
                 if (ChronoUnit.DAYS.between(LocalDate.parse(date, myFormat),
-                        ZonedDateTime.now(ZoneId.of(timeZone)).toLocalDate()) <= 1) {
+                        ZonedDateTime.now(ZoneId.of(timeZone)).toLocalDate()) <= freq) {
                     System.out.println(currStreak);
                 }
                 else {
@@ -112,7 +48,8 @@ public class GoalManager {
                 if (!date.equals("01-01-0001")) {
                     System.out.println("Last completed: " + date);
                 }
-                System.out.println();
+                if (fileSC.hasNext())
+                    System.out.println();
                 
                 taskSC.close();
             }
@@ -123,9 +60,10 @@ public class GoalManager {
         finally {
             if (fileSC != null) fileSC.close();
         }
+        System.out.println();
     }
 
-    public static void writeGoalData(String task, int newVal) {
+    public static void writeGoalData(String task, int newVal, int nFreq) {
         String out = "";
         File myObj = new File(directory + "\\goaldata.txt");
         Scanner fileSC = null;
@@ -143,19 +81,20 @@ public class GoalManager {
                 return;
             }
 
+            int freq = Integer.parseInt(taskSC.next());
             String date = taskSC.next();
             LocalDate prevDate = LocalDate.parse(date, myFormat);
             long timeDiff = ChronoUnit.DAYS.between(prevDate,
                     ZonedDateTime.now(ZoneId.of(timeZone)).toLocalDate());
             
-            out += DELIM + task + DELIM + " " +
+            out += DELIM + task + DELIM + " " + freq + " " +
                     ZonedDateTime.now(ZoneId.of(timeZone)).toLocalDate().format(myFormat);
 
             int currStreak = Integer.parseInt(taskSC.next());
-            if (timeDiff == 1) {
+            if (timeDiff <= freq && timeDiff > 0) {
                 currStreak++;
             }
-            else if (timeDiff > 1) {
+            else if (timeDiff > freq) {
                 currStreak = 1;
             }
             out += " " + currStreak;
@@ -181,7 +120,7 @@ public class GoalManager {
                 while (fileSC.hasNextLine()) {
                     out += fileSC.nextLine() + "\n";
                 }
-                out += "##" + task + "## 01-01-0001 0 0 0";
+                out += "##" + task + "## " + nFreq + " 01-01-0001 0 0 0";
                 System.out.println(String.format(GOAL_SUCCESS, task));
                 System.out.println();
             }

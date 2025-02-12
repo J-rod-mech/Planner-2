@@ -8,7 +8,9 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.ResolverStyle;
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.time.DayOfWeek;
 
 public class Planner {
     //constants
@@ -27,6 +29,7 @@ public class Planner {
     final static int HOUR_OFFSET = 3;
     final static String ADD_SUCCESS = "%s added.";
     final static String REM_SUCCESS = "%s removed.";
+    final static String TAG_REM_SUCCESS = "Tag %s removed from %s.";
     final static String MOVE_SUCCESS = "%s moved.";
     final static String NOTE_SUCCESS = "Note set to \"%s\".";
     final static String DATE_SUCCESS = "Date changed to %s.";
@@ -37,6 +40,7 @@ public class Planner {
             + "rem  [r]\n"
             + "move [m]\n"
             + "note [n]\n"
+            + "tick [t]\n"
             + "date [d]\n"
             + "list [l]\n"
             + "help [h]\n"
@@ -52,24 +56,27 @@ public class Planner {
             + "rem <#> <tag>: removes tag\n"
             + "rem <task> <#> <tag>: removes tag from task\n";
     final static String HELP_VIEW = "view: displays schedule\n"
-            + "view <task> <instance>: displays note for instance n of a task\n";
+            + "view <task> <instance>: displays tag and note for instance n of a task\n";
     final static String HELP_MOVE = "move <task> <+/-> <time>: shifts all instances of a task\n"
             + "move <task> <instance> <+/-> <time>: shifts instance n of a task\n"
             + "move <task> <instance> <start> <end>: moves instance n of a task to time slot\n"
             + "move <start> <end> <+/-> <time>: shifts time slot\n";
     final static String HELP_NOTE = "note <task> <instance>: sets note for instance n of a task\n";
-    final static String HELP_DATE = "date <date>: sets current working date\n";
+    final static String HELP_DATE = "date <date>: sets current working date\n"
+            + "date <+/-> <days>: changes current working date by n amount of days\n";
     final static String HELP_LIST = "list: displays all current and future tasks\n"
             + "list <#>: displays all tags\n"
             + "list <#> <tag>: displays all current and future tasks with tag\n";
     final static String HELP_HELP = "help: displays list of commands\n"
             + "help <command>: displays uses of a command\n";
     final static String HELP_QUIT = "quit: quits program\n";
-    final static String HELP_TICK = "tick <task>: marks instance n of a task complete\n";
+    final static String HELP_TICK = "tick <task>: marks all instances of a task complete\n"
+            + "tick <task> <instace>: marks instance n of a task complete\n";
     final static String COMMAND_ERROR = "Invalid command.";
     final static String TIME_ERROR = "Invalid time slot.";
     final static String INC_ERROR = "Invalid time increment.";
     final static String DATE_ERROR = "Invalid date.";
+    final static String WEEKDAY_ERROR = "Invalid day of the week.";
     final static String TASK_ERROR = "%s does not exist.";
     final static String BOUND_ERROR = "%s cannot be moved outside valid time bounds.";
     final static String TICK_ERROR = "%s already completed.";
@@ -77,10 +84,15 @@ public class Planner {
     final static String TAG_SUCCESS = "Tag %s added.";
     final static String TAG_ERROR = "Tag %s does not exist.";
     final static String KEY_ERROR = "Keyword modification not allowed.";
+    final static String TAG_DEL_ERROR = "Tag %s does not exist.";
+    final static String DAYS_ERROR = "Amount of days must be a positive integer.";
+    final static String NOT_REM = "Nothing to remove.";
+    final static String NOT_MOVE = "Nothing to move.";
+
     final static String DELIM = "##";
+    final static String DELIM_ERROR = "Cannot include delimiter " + DELIM + ".";
     final static String KEY_TAG1 = "goal";
     final static String KEY_TAG2 = "habit";
-    final static String KEY_TAG3 = "undated";
     
     // custom parameters
     static String timeZone = "UTC-8";
@@ -92,9 +104,13 @@ public class Planner {
 
 
 
-    public static boolean inputEquals(String in, String command) {
+    public static boolean inputEquals(String in, String command, int amt) {
+        if (command.length() < amt) {
+            return false;
+        }
+
         if (command.toLowerCase().equals(in) ||
-                command.substring(0, 1).toLowerCase().equals(in)) {
+                command.substring(0, amt).toLowerCase().equals(in)) {
             return true;
         }
         
@@ -167,31 +183,31 @@ public class Planner {
         return slot / HUNDRED_DIV * QUAD + slot % HUNDRED_DIV / FIFTEEN_DIV;
     }
 
-    public static Task getTask(String name, String N) {
+    public static int getTaskIdx(String name, String N) {
         int n = -1;
         try {
             n = Integer.parseInt(N);
         }
         catch (NumberFormatException e) {
-            return null;
+            return -1;
         }
 
-        for (Task t : tasks) {
-            if (t.getName().equals(name)) {
+        for (int i = 0; i < tasks.size(); i++) {
+            if (tasks.get(i).getName().equals(name)) {
                 n--;
                 if (n == 0) {
-                    return t;
+                    return i;
                 }
             }
         }
 
-        return null;
+        return -1;
     }
 
     public static void insertTask(String name, String tag, int start, int end) {
         for (int i = 0; i < tasks.size(); i++) {
             if (tasks.get(i).getName().equals(name)) {
-                if (start <= tasks.get(i).getStart()) {
+                if (start < tasks.get(i).getStart()) {
                     tasks.add(i, new Task(name, tag, start, end));
                     return;
                 }
@@ -205,18 +221,62 @@ public class Planner {
         tasks.add(new Task(name, tag, start, end));
     }
 
+    public static void insertTask(Task task) {
+        for (int i = 0; i < tasks.size(); i++) {
+            if (tasks.get(i).getName().equals(task.getName())) {
+                if (task.getStart() < tasks.get(i).getStart()) {
+                    tasks.add(i, task);
+                    return;
+                }
+                else if (i == tasks.size() - 1 ||
+                        !tasks.get(i + 1).getName().equals(task.getName())) {
+                    tasks.add(i + 1, task);
+                    return;
+                }
+            }
+        }
+        tasks.add(task);
+    }
+
+    public static void changeTaskPriority(int idx, int newStart, int newEnd) {
+        Task task = tasks.get(idx);
+        
+        String name = task.getName();
+        String tag = task.getTag();
+        Boolean complete = task.isComplete();
+        String note = task.getNote();
+
+        tasks.remove(idx);
+        for (int i = 0; i < tasks.size(); i++) {
+            if (tasks.get(i).getName().equals(name)) {
+                if (newStart <= tasks.get(i).getStart()) {
+                    tasks.add(i, new Task(name, tag, complete, newStart, newEnd, note));
+                    return;
+                }
+                else if (i == tasks.size() - 1 ||
+                        !tasks.get(i + 1).getName().equals(name)) {
+                    tasks.add(i + 1, new Task(name, tag, complete, newStart, newEnd, note));
+                    return;
+                }
+            }
+        }
+        tasks.add(new Task(name, tag, complete, newStart, newEnd, note));
+    }
+
     public static void printSchedule() {
         @SuppressWarnings("unchecked")
         ArrayList<String>[] schedule = new ArrayList[MAX_HOUR + 1];
         for (Task t : tasks) {
             for (int i = t.getStart(); i < t.getEnd(); i++) {
                 if (schedule[i] == null) schedule[i] = new ArrayList<String>();
-                schedule[i].add(t.getName());
+                schedule[i].add(t.getName() + (!t.getNote().equals(" ") ? "*" : ""));
             }
         }
         
         boolean isEmpty = true;
 
+        String day = LocalDate.parse(zonedDate, myFormat).getDayOfWeek().toString();
+        System.out.print(day.charAt(0) + day.substring(1).toLowerCase() + ", ");
         System.out.println(zonedDate + ":");
         for (int i = MIN_HOUR; i <= MAX_HOUR; i++) {
             int j = MAX_HOUR - i;
@@ -268,10 +328,30 @@ public class Planner {
                             Scanner lineSC = new Scanner(fileSC.next()).useDelimiter(DELIM);
                             String in = lineSC.next();
                             String in2 = lineSC.next();
-                            if (!taskList.contains(in) && (tag == null || tag.equals(in2))) {
-                                list += "[" + ((lineSC.next().equals("true")) ? "X" : " ") + "] "
-                                        + date + ": " + in + "\n";
-                                taskList.add(in);
+                            if (!Boolean.parseBoolean(lineSC.next()) && !taskList.contains(in) && (tag == null || tag.equals(in2))) {
+                                list += "[ ] " + date + ": " + in +
+                                        (!in2.equals(" ") ? " # " + in2 : "") + "\n";
+                                taskList.add(in + (!in2.equals(" ") ? DELIM + in2 : ""));
+                                match = true;
+                            }
+                            lineSC.close();
+                        }
+                        fileSC.close();
+                    }
+                    catch (Exception e) {
+                        System.out.println("Could not find schedule.");
+                    }
+
+                    try {
+                        Scanner fileSC = new Scanner(directoryListing[i]).useDelimiter("\n");
+                        while (fileSC.hasNext()) {
+                            Scanner lineSC = new Scanner(fileSC.next()).useDelimiter(DELIM);
+                            String in = lineSC.next();
+                            String in2 = lineSC.next();
+                            if (Boolean.parseBoolean(lineSC.next()) && !taskList.contains(in) && (tag == null || tag.equals(in2))) {
+                                list += "[X] " + date + ": " + in +
+                                        (!in2.equals(" ") ? " # " + in2 : "") + "\n";
+                                taskList.add(in + (!in2.equals(" ") ? DELIM + in2 : ""));
                                 match = true;
                             }
                             lineSC.close();
@@ -281,6 +361,7 @@ public class Planner {
                     catch (Exception e) {
                         System.out.println("Could not find schedule.");
                     } 
+
                     if (taskList.size() > 0 && match) {
                         list += "\n";
                     }
@@ -314,7 +395,7 @@ public class Planner {
                     break;
                 }
                 String in1 = sc2.next();
-                if (inputEquals(in1, "add")) {
+                if (inputEquals(in1, "add", 1)) {
                     if (!sc2.hasNext()) {
                         System.out.println(COMMAND_ERROR);
                         System.out.println();
@@ -324,8 +405,14 @@ public class Planner {
                     //add <task>: adds task at the end
                     String name = sc2.next();
                     if (!sc2.hasNext()) {
-                        insertTask(name, " ", MAX_HOUR - 1, MAX_HOUR);
-                        System.out.println(String.format(ADD_SUCCESS, name));
+                        if (name.contains(DELIM)) {
+                            System.out.println(DELIM_ERROR);
+                        }
+                        else {
+                            insertTask(name, " ", MAX_HOUR - 1, MAX_HOUR);
+                            System.out.println(String.format(ADD_SUCCESS, name));
+                        }
+                        
                         System.out.println();
                         break;
                     }
@@ -336,6 +423,11 @@ public class Planner {
                     //add <#> <tag>: creates tag
                     if (!sc2.hasNext()) {
                         if (name.equals("#")) {
+                            if (in2.contains(DELIM)) {
+                                System.out.println(DELIM_ERROR);
+                                System.out.println();
+                                break;
+                            }
                             if (!TagManager.findTag(in2)) {
                                 TagManager.writeTagData(in2);
                                 System.out.println(String.format(TAG_SUCCESS, in2));
@@ -355,16 +447,158 @@ public class Planner {
                     int end = convertTime(in3);
                     if (!sc2.hasNext()) {
                         //add <task> <#> <tag>: adds task with tag
+                        if (name.contains(DELIM)) {
+                            System.out.println(DELIM_ERROR);
+                            System.out.println();
+                            break;
+                        }
+                        
                         if (in2.equals("#")) {
                             if (in3.toLowerCase().equals(KEY_TAG1)) {
-                                GoalManager.writeGoalData(name, -1);
+                                sc2.close();
+                                Scanner sc3 = null;
+                                System.out.println("Set frequency for goal (days): ");
+                                int freq;
+                                try {
+                                    sc3 = new Scanner(sc1.next()).useDelimiter(System.lineSeparator());
+                                    if (!sc3.hasNext()) {
+                                        System.out.println(COMMAND_ERROR);
+                                        System.out.println();
+                                        sc3.close();
+                                        break;
+                                    }
+                                    try {
+                                        freq = Integer.parseInt(sc3.next());
+                                    }
+                                    catch (Exception e) {
+                                        System.out.println(COMMAND_ERROR);
+                                        System.out.println();
+                                        sc3.close();
+                                        break;
+                                    }
+                                }
+                                finally {
+                                    if (sc3 != null) {
+                                        sc3.close();
+                                    }
+                                }
+                                GoalManager.writeGoalData(name, -1, freq);
                                 break;
                             }
                             else if (in3.toLowerCase().equals(KEY_TAG2)) {
                                 //TODO: habit functionality
-                            }
-                            else if (in3.toLowerCase().equals(KEY_TAG3)) {
-                                //TODO: undated functionality
+                                sc2.close();
+                                Scanner sc3 = null;
+                                try {
+                                    System.out.println("Set time slot for habit: ");
+
+                                    sc3 = new Scanner(sc1.next());
+                                    if (!sc3.hasNext()) {
+                                        sc3.close();
+                                        System.out.println(TIME_ERROR);
+                                        System.out.println();
+                                        break;
+                                    }
+                                    start = convertTime(sc3.next());
+
+                                    if (!sc3.hasNext()) {
+                                        sc3.close();
+                                        System.out.println(TIME_ERROR);
+                                        System.out.println();
+                                        break;
+                                    }
+                                    end = convertTime(sc3.next());
+
+                                    if (sc3.hasNext()) {
+                                        sc3.close();
+                                        System.out.println(TIME_ERROR);
+                                        System.out.println();
+                                        break;
+                                    }
+                                    sc3.close();
+                                    if (start < 0 || end < 0) {
+                                        System.out.println(TIME_ERROR);
+                                        System.out.println();
+                                        break;
+                                    }
+
+                                    System.out.println("Set days for habit: ");
+                                    sc3 = new Scanner(sc1.next());
+                                    char sched[] = "0000000".toCharArray();
+                                    boolean breakOut = false;
+                                    while (sc3.hasNext()) {
+                                        String weekday = sc3.next();
+                                        if (inputEquals(weekday, "monday", 3)) {
+                                            sched[0] = '1';
+                                        }
+                                        else if (inputEquals(weekday, "tuesday", 3)) {
+                                            sched[1] = '1';
+                                        }
+                                        else if (inputEquals( weekday,"wednesday", 3)) {
+                                            sched[2] = '1';
+                                        }
+                                        else if (inputEquals(weekday, "thursday", 3)) {
+                                            sched[3] = '1';
+                                        }
+                                        else if (inputEquals(weekday, "friday", 3)) {
+                                            sched[4] = '1';
+                                        }
+                                        else if (inputEquals(weekday, "saturday", 3)) {
+                                            sched[5] = '1';
+                                        }
+                                        else if (inputEquals(weekday, "sunday", 3)) {
+                                            sched[6] = '1';
+                                        }
+                                        else {
+                                            sc3.close();
+                                            System.out.println(WEEKDAY_ERROR);
+                                            System.out.println();
+                                            breakOut = true;
+                                            break;
+                                        }
+                                    }
+                                    if (breakOut)
+                                        break;
+                                    sc3.close();
+
+                                    System.out.println("Set tag for habit (optional): ");
+                                    sc3 = new Scanner(sc1.next());
+                                    
+                                    String tag = " ";
+                                    if (sc3.hasNext()) {
+                                        String temp = sc3.next();
+                                        if (TagManager.findTag(temp)) {
+                                            tag = temp;
+                                        }
+                                        else {
+                                            System.out.println(String.format(TAG_ERROR, temp));
+                                            System.out.println();
+                                            break;
+                                        }
+                                    }
+                                    sc3.close();
+
+                                    System.out.println("Set note for habit (optional): ");
+                                    sc3 = new Scanner(sc1.next()).useDelimiter(System.lineSeparator());
+                                    String note = " ";
+                                    if (sc3.hasNext())
+                                        note = sc3.next();
+                                    sc3.close();
+
+                                    HabitManager.addHabit(name, tag, new String(sched),
+                                            start, end, note);
+                                    System.out.println();
+                                }
+                                catch (Exception e) {
+                                    e.printStackTrace();
+                                    System.out.println(COMMAND_ERROR);
+                                    System.out.println();
+                                }
+                                finally {
+                                    if (sc3 != null) {
+                                        sc3.close();
+                                    }
+                                }
                             }
                             else {
                                 if (TagManager.findTag(in3)) {
@@ -415,6 +649,12 @@ public class Planner {
                     }
                     
                     //add <task> <#> <tag> <start> <end>: adds task with tag to time slot
+                    if (name.contains(DELIM)) {
+                        System.out.println(DELIM_ERROR);
+                        System.out.println();
+                        break;
+                    }
+                    
                     if (!in2.equals("#")) {
                         System.out.println(COMMAND_ERROR);
                         System.out.println();
@@ -439,7 +679,7 @@ public class Planner {
                         break;
                     }
                 }
-                else if (inputEquals(in1, "rem")) {
+                else if (inputEquals(in1, "rem", 1)) {
                     if (!sc2.hasNext()) {
                         System.out.println(COMMAND_ERROR);
                         System.out.println();
@@ -449,7 +689,7 @@ public class Planner {
 
                     //rem <task>: removes all instances of a task
                     if (!sc2.hasNext()) {
-                        if (getTask(in2, "1") == null) {
+                        if (getTaskIdx(in2, "1") == -1) {
                             System.out.println(String.format(TASK_ERROR, in2));
                             System.out.println();
                             break;
@@ -461,6 +701,7 @@ public class Planner {
                                 i--;
                             }
                         }
+
                         System.out.println(String.format(REM_SUCCESS, in2));
                         System.out.println();
                         break;
@@ -486,8 +727,7 @@ public class Planner {
     
                         //rem <#> <tag>: removes tag
                         if (in2.equals("#")) {
-                            if (in3.equals(KEY_TAG1) || in3.equals(KEY_TAG2) ||
-                                    in3.equals(KEY_TAG3)) {
+                            if (in3.equals(KEY_TAG1) || in3.equals(KEY_TAG2)) {
                                 System.out.println(KEY_ERROR);
                             }
                             else {
@@ -498,7 +738,7 @@ public class Planner {
                         }
     
                         //rem <task> <instance>: removes instance n of a task
-                        if (getTask(in2, in3) != null) {
+                        if (getTaskIdx(in2, in3) != -1) {
                             for (int i = 0; i < tasks.size(); i++) {
                                 if (tasks.get(i).getName().equals(in2)) {
                                     n--;
@@ -512,16 +752,32 @@ public class Planner {
                         }
     
                         //rem <start> <end>: removes all tasks within time slot
-                        else if (start >= 0) {
+                        else if (start >= 0) {                    
                             if (end > start) {
+                                boolean found = false;
+                                String lTask = DELIM;
+                                int m = -1;
+
                                 for (int i = 0; i < tasks.size(); i++) {
+                                    if (tasks.get(i).getName().equals(lTask)) {
+                                        m++;
+                                    }
+                                    else {
+                                        m = 1;
+                                        lTask = tasks.get(i).getName();
+                                    }
+                                    
                                     if (start < tasks.get(i).getEnd() &&
                                             end > tasks.get(i).getStart()) {
+                                        found = true;
+                                        System.out.println(String.format(REM_SUCCESS, tasks.get(i).getName() + " " + m));
                                         tasks.remove(i);
                                         i--;
                                     }
                                 }
-                                System.out.println(String.format(REM_SUCCESS, "Time slot"));
+
+                                if (!found)
+                                    System.out.println(NOT_REM);
                             }
                             else {
                                 System.out.println(TIME_ERROR);
@@ -553,13 +809,20 @@ public class Planner {
                         GoalManager.removeGoal(in2);
                     }
                     else if (in4.equals(KEY_TAG2)) {
-                        //TODO
-                    }
-                    else if (in4.equals(KEY_TAG3)) {
-                        //TODO
+                        HabitManager.removeHabit(in2);
                     }
                     else if (TagManager.findTag(in4)) {
-                        //TODO
+                        if (getTaskIdx(in2, "1") == -1) {
+                            System.out.println(String.format(TASK_ERROR, in4));
+                        }
+                        else {
+                            for (int i = 0; i < tasks.size(); i++) {
+                                if (tasks.get(i).getName().equals(in2)) {
+                                    tasks.get(i).setTag(" ");
+                                }
+                            }
+                            System.out.println(String.format(TAG_REM_SUCCESS, in4, in2));
+                        }
                     }
                     else {
                         System.out.println(String.format(TAG_ERROR, in4));
@@ -570,7 +833,7 @@ public class Planner {
                 }
 
                 //view: displays schedule
-                else if (inputEquals(in1, "view")) {
+                else if (inputEquals(in1, "view", 1)) {
                     if (!sc2.hasNext()) {
                         printSchedule();
                         break;
@@ -590,21 +853,27 @@ public class Planner {
                         break;
                     }
 
-                    //view <task> <instance>: displays note for instance n of a task
-                    Task task = getTask(in2, in3);
-                    if (task == null) {
+                    //view <task> <instance>: displays tag and note for instance n of a task
+                    
+                    int idx = getTaskIdx(in2, in3);
+                    if (idx == -1) {
                         System.out.println(String.format(TASK_ERROR, in2 + " " + in3));
                         System.out.println();
                         break;
                     }
 
+                    Task task = tasks.get(idx);
+                    System.out.print(in2);
+                    if (!task.getTag().equals(" "))
+                        System.out.print(" # " + task.getTag());
+                    System.out.println(":");
                     System.out.println("\"" + task.getNote() + "\"");
                     System.out.println();
                     break;
                 }
 
                 //help: displays list of commands
-                else if (inputEquals(in1, "help")) {
+                else if (inputEquals(in1, "help", 1)) {
                     if (!sc2.hasNext()) {
                         System.out.println(HELP_MENU);
                         break;
@@ -618,34 +887,34 @@ public class Planner {
                     }
                     
                     //help <command>: displays uses of a command
-                    if (inputEquals(in2, "view")) {
+                    if (inputEquals(in2, "view", 1)) {
                         System.out.println(HELP_VIEW);
                     }
-                    else if (inputEquals(in2, "add")) {
+                    else if (inputEquals(in2, "add", 1)) {
                         System.out.println(HELP_ADD);
                     }
-                    else if (inputEquals(in2, "rem")) {
+                    else if (inputEquals(in2, "rem", 1)) {
                         System.out.println(HELP_REM);
                     }
-                    else if (inputEquals(in2, "move")) {
+                    else if (inputEquals(in2, "move", 1)) {
                         System.out.println(HELP_MOVE);
                     }
-                    else if (inputEquals(in2, "note")) {
+                    else if (inputEquals(in2, "note", 1)) {
                         System.out.println(HELP_NOTE);
                     }
-                    else if (inputEquals(in2, "date")) {
+                    else if (inputEquals(in2, "date", 1)) {
                         System.out.println(HELP_DATE);
                     }
-                    else if (inputEquals(in2, "list")) {
+                    else if (inputEquals(in2, "list", 1)) {
                         System.out.println(HELP_LIST);
                     }
-                    else if (inputEquals(in2, "help")) {
+                    else if (inputEquals(in2, "help", 1)) {
                         System.out.println(HELP_HELP);
                     }
-                    else if (inputEquals(in2, "quit")) {
+                    else if (inputEquals(in2, "quit", 1)) {
                         System.out.println(HELP_QUIT);
                     }
-                    else if (inputEquals(in2, "quit")) {
+                    else if (inputEquals(in2, "tick", 1)) {
                         System.out.println(HELP_TICK);
                     }
                     else {
@@ -655,7 +924,7 @@ public class Planner {
 
                     break;
                 }
-                else if (inputEquals(in1, "list")) {
+                else if (inputEquals(in1, "list", 1)) {
                     //list: displays all current and future tasks
                     if (!sc2.hasNext()) {
                         printList(null);
@@ -668,7 +937,6 @@ public class Planner {
                         if (in2.equals("#")) {
                             System.out.println(KEY_TAG1);
                             System.out.println(KEY_TAG2);
-                            System.out.println(KEY_TAG3);
                             TagManager.printTagData();
                         }
                         else {
@@ -690,20 +958,21 @@ public class Planner {
                         GoalManager.printGoalData();
                     }
                     else if (in3.equals(KEY_TAG2)) {
-                        
-                    }
-                    else if (in3.equals(KEY_TAG3)) {
-
+                        HabitManager.printHabitData();
                     }
                     else if (TagManager.findTag(in3)) {
                         printList(in3);
+                    }
+                    else {
+                        System.out.println(String.format(TAG_ERROR, in3));
+                        System.out.println();
                     }
 
                     break;
                 }
 
                 //date <date>: sets current working date
-                else if (inputEquals(in1, "date")) {
+                else if (inputEquals(in1, "date", 1)) {
                     if (!sc2.hasNext()) {
                         System.out.println(COMMAND_ERROR);
                         System.out.println();
@@ -711,41 +980,71 @@ public class Planner {
                     }
                     String in2 = sc2.next();
                     
-                    if (sc2.hasNext()) {
-                        System.out.println(COMMAND_ERROR);
-                        System.out.println();
-                        break;
-                    }
-                    try {
-                        if (in2.length() == 10) {
-                            LocalDate.parse(in2, myFormat);
-                            zonedDate = in2;
+                    if (!sc2.hasNext()) {
+                        try {
+                            if (in2.length() == 10) {
+                                LocalDate.parse(in2, myFormat);
+                                zonedDate = in2;
+                            }
+                            else if (in2.length() == 5) {
+                                LocalDate.parse(in2 + zonedDate.substring(5), myFormat);
+                                zonedDate = in2 + zonedDate.substring(5);
+                            }
+                            else if (in2.length() == 2) {
+                                LocalDate.parse(zonedDate.substring(0, 3) + in2 + zonedDate.substring(5), myFormat);
+                                zonedDate = zonedDate.substring(0, 3) + in2 + zonedDate.substring(5);
+                            }
+                            else {
+                                System.out.println(DATE_ERROR);
+                                System.out.println();
+                                break;
+                            }
+                            FileManager.readFile();
+                            String day = LocalDate.parse(zonedDate, myFormat).getDayOfWeek().toString();
+                            System.out.println(String.format(DATE_SUCCESS,
+                                    day.charAt(0) + day.substring(1).toLowerCase() + ", " + zonedDate));
+                            System.out.println();
                         }
-                        else if (in2.length() == 5) {
-                            LocalDate.parse(in2 + zonedDate.substring(5), myFormat);
-                            zonedDate = in2 + zonedDate.substring(5);
-                        }
-                        else if (in2.length() == 2) {
-                            LocalDate.parse(zonedDate.substring(0, 3) + in2 + zonedDate.substring(5), myFormat);
-                            zonedDate = zonedDate.substring(0, 3) + in2 + zonedDate.substring(5);
-                        }
-                        else {
+                        catch(Exception e) {
                             System.out.println(DATE_ERROR);
                             System.out.println();
                             break;
                         }
-                        FileManager.readFile();
-                        System.out.println(String.format(DATE_SUCCESS, zonedDate));
-                        System.out.println();
+                        break;
                     }
-                    catch(Exception e) {
-                        System.out.println(DATE_ERROR);
+                    
+                    //date <+/-> <days>: changes current working date by n amount of days
+                    String in3 = sc2.next();
+                    if (sc2.hasNext() || !(in2.equals("+") || in2.equals("-"))) {
+                        System.out.println(COMMAND_ERROR);
                         System.out.println();
                         break;
                     }
+
+                    try {
+                        int temp = Integer.parseInt(in3);
+                        if (temp < 1)
+                            throw new NumberFormatException();
+                    }
+                    catch (NumberFormatException e) {
+                        System.out.println(DAYS_ERROR);
+                        System.out.println();
+                        break;
+                    }
+
+                    int mult = 1;
+                    if (in2.equals("-"))
+                        mult = -1;
+                    zonedDate = LocalDate.parse(zonedDate, myFormat).plusDays(Integer.parseInt(in3) * mult).format(myFormat);
+                    FileManager.readFile();
+
+                    String day = LocalDate.parse(zonedDate, myFormat).getDayOfWeek().toString();
+                    System.out.println(String.format(DATE_SUCCESS,
+                            day.charAt(0) + day.substring(1).toLowerCase() + ", " + zonedDate));
+                    System.out.println();
                     break;
                 }
-                else if (inputEquals(in1, "move")) {
+                else if (inputEquals(in1, "move", 1)) {
                     if (!sc2.hasNext()) {
                         System.out.println(COMMAND_ERROR);
                         System.out.println();
@@ -770,7 +1069,7 @@ public class Planner {
                     
                     //move <task> <+/-> <time>: shifts all instances of a task
                     if (!sc2.hasNext()) { //3 args
-                        if (getTask(in2, "1") == null) {
+                        if (getTaskIdx(in2, "1") == -1) {
                             System.out.println(String.format(TASK_ERROR, in2));
                             System.out.println();
                             break;
@@ -809,7 +1108,6 @@ public class Planner {
                         
                         
                         System.out.println();
-                        break;
                     }
                     else { //4 args
                         String in5 = sc2.next();
@@ -819,7 +1117,7 @@ public class Planner {
                             break;
                         }
                         
-                        Task task = getTask(in2, in3);
+                        int idx = getTaskIdx(in2, in3);
                         int bStart = convertTime(in2);
                         int bEnd = convertTime(in3);
                         int start = convertTime(in4);
@@ -837,11 +1135,13 @@ public class Planner {
                             end = MAX_HOUR;
                         }
 
-                        if (task != null) {
+                        if (idx != -1) {
+                            Task task = tasks.get(idx);
+                            
                             //move <task> <instance> <start> <end>: moves instance n of a task to time slot
                             if (start >= 0) {
                                 if (end > start) {
-                                    task.setTime(start, end);
+                                    changeTaskPriority(idx, start, end);
                                     System.out.println(String.format(MOVE_SUCCESS, in2 + " " + in3));
                                 }
                                 else {
@@ -866,7 +1166,7 @@ public class Planner {
                                     System.out.println(String.format(BOUND_ERROR, in2 + " " + in3));
                                 }
                                 else {
-                                    task.setTime(task.getStart() + s, task.getEnd() + s);
+                                    changeTaskPriority(idx, task.getStart() + s, task.getEnd() + s);
                                     System.out.println(String.format(MOVE_SUCCESS, in2 + " " + in3));
                                 }
                             }
@@ -875,7 +1175,6 @@ public class Planner {
                             }
                            
                             System.out.println();
-                            break;
                         }
                         
                         //move <start> <end> <+/-> <time>: shifts time slot
@@ -890,45 +1189,65 @@ public class Planner {
                                 System.out.println(INC_ERROR);
                             }
                             else {
+                                ArrayList<Task> movedTasks = new ArrayList<>();
+                                ArrayList<Integer> taskNs = new ArrayList<>();
                                 int s = convertInc(in5);
                                 if (in4.equals("-")) s *= -1;
 
                                 int n = -1;
-                                String lTask = null;
-                                for (Task t : tasks) {
-                                    if (bStart < t.getEnd() &&
-                                            bEnd > t.getStart()) {
-                                        if (t.getName().equals(lTask)) {
+                                String lTask = DELIM;
+                                for (int i = 0; i < tasks.size(); i++) {
+                                    if (tasks.get(i).getName().equals(lTask)) {
                                             n++;
                                         }
-                                        else {
-                                            n = 1;
-                                        }
-                                        lTask = t.getName();
-                                        if (t.getStart() + s < MIN_HOUR ||
-                                                t.getEnd() + s > MAX_HOUR) {
+                                    else {
+                                        n = 1;
+                                    }
+                                    lTask = tasks.get(i).getName();
+
+                                    if (bStart < tasks.get(i).getEnd() &&
+                                            bEnd > tasks.get(i).getStart()) {
+                                        if (tasks.get(i).getStart() + s < MIN_HOUR ||
+                                                tasks.get(i).getEnd() + s > MAX_HOUR) {
                                             System.out.println(String.format(BOUND_ERROR, lTask + " " + n));
                                         }
                                         else {
-                                            t.setTime(t.getStart() + s, t.getEnd() + s);
-                                            System.out.println(String.format(MOVE_SUCCESS, lTask + " " + n));
+                                            movedTasks.add(tasks.get(i));
+                                            taskNs.add(n);
+                                            tasks.remove(i);
+                                            i--;
                                         }
                                     }
                                 }
+
+                                int i = 0;
+                                lTask = DELIM;
+                                for (Task t : movedTasks) {
+                                    insertTask(new Task(t.getName(), t.getTag(),
+                                            t.isComplete(), t.getStart() + s,
+                                            t.getEnd() + s, t.getNote()));
+                                    System.out.println(String.format(MOVE_SUCCESS, t.getName() + " " + taskNs.get(i)));
+                                    i++;
+                                }
+
+                                if (movedTasks.size() == 0)
+                                    System.out.println(NOT_MOVE);
                             }
 
                             System.out.println();
-                            break;
                         }
 
-                        System.out.println(String.format(TASK_ERROR, in2 + " " + in3));
-                        System.out.println();
-                        break;
+                        if (getTaskIdx(in2, in3) == -1 && !in4.equals("+")
+                                && !in4.equals("-")) {
+                            System.out.println(String.format(TASK_ERROR, in2 + " " + in3));
+                            System.out.println();
+                        }
                     }
+                    break;
                 }
 
                 //note <task> <instance>: sets note for instance n of a task
-                else if (inputEquals(in1, "note")) {
+                else if (inputEquals(in1, "note", 1)) {
                     if (!sc2.hasNext()) {
                         System.out.println(COMMAND_ERROR);
                         System.out.println();
@@ -951,12 +1270,14 @@ public class Planner {
                         break;
                     }
 
-                    Task task = getTask(in2, in3);
-                    if (task == null) {
+                    int idx = getTaskIdx(in2, in3);
+                    if (idx == -1) {
                         System.out.println(String.format(TASK_ERROR, in2 + " " + in3));
                         System.out.println();
                         break;
                     }
+                    Task task = tasks.get(idx);
+                    
 
                     sc2.close();
                     Scanner sc3 = null;
@@ -970,6 +1291,12 @@ public class Planner {
                         }
                         String note = sc3.next();
 
+                        if (note.contains(DELIM)) {
+                            System.out.println(DELIM_ERROR);
+                            System.out.println();
+                            break;
+                        }
+                        
                         task.setNote(note);
                         System.out.println(String.format(NOTE_SUCCESS, note));
                         System.out.println();
@@ -982,9 +1309,9 @@ public class Planner {
 
                     break;
                 }
-
-                //tick <task>: marks instance n of a task complete
-                else if (inputEquals(in1, "tick")) {
+                
+                //tick <task>: marks all instances of a task complete
+                else if (inputEquals(in1, "tick", 1)) {
                     if (!sc2.hasNext()) {
                         System.out.println(COMMAND_ERROR);
                         System.out.println();
@@ -993,35 +1320,61 @@ public class Planner {
                     
                     String in2 = sc2.next();
 
-                    if (sc2.hasNext()) {
-                        System.out.println(COMMAND_ERROR);
-                        System.out.println();
-                        break;
-                    }
-                    
-                    Task task = getTask(in2, "1");
-                    if (task == null) {
-                        System.out.println(String.format(TASK_ERROR, in2));
-                        System.out.println();
-                        break;
-                    }
-
-                    if (task.isComplete()) {
-                        System.out.println(String.format(TICK_ERROR, in2));
-                        System.out.println();
-                        break;
-                    }
-                    
                     int sum = 0;
-                    for (Task t : tasks) {
-                        if (t.getName().equals(in2)) {
-                            sum += t.getEnd() - t.getStart();
-                            t.tick();
+                    if (!sc2.hasNext()) {
+                        int idx = getTaskIdx(in2, "1");
+                        if (idx == -1) {
+                            System.out.println(String.format(TASK_ERROR, in2));
+                            System.out.println();
+                            break;
                         }
+                        Task task = tasks.get(idx);
+    
+                        if (task.isComplete()) {
+                            System.out.println(String.format(TICK_ERROR, in2));
+                            System.out.println();
+                            break;
+                        }
+                        
+                        for (Task t : tasks) {
+                            if (t.getName().equals(in2)) {
+                                sum += t.getEnd() - t.getStart();
+                                t.tick();
+                            }
+                        }
+                        System.out.println(String.format(TICK_SUCCESS, in2));
                     }
 
-                    GoalManager.writeGoalData(in2, sum);
-                    System.out.println(String.format(TICK_SUCCESS, in2));
+                    //tick <task> <instace>: marks instance n of a task complete
+                    else {
+                        String in3 = sc2.next();
+                        
+                        if (sc2.hasNext()) {
+                            System.out.println(COMMAND_ERROR);
+                            System.out.println();
+                            break;
+                        }
+                        
+                        int idx = getTaskIdx(in2, in3);
+                        if (idx == -1) {
+                            System.out.println(String.format(TASK_ERROR, in2 + " " + in3));
+                            System.out.println();
+                            break;
+                        }
+                        Task task = tasks.get(idx);
+    
+                        if (task.isComplete()) {
+                            System.out.println(String.format(TICK_ERROR, in2));
+                            System.out.println();
+                            break;
+                        }
+                        
+                        sum = task.getEnd() - task.getStart();
+                        task.tick();
+                        System.out.println(String.format(TICK_SUCCESS, in2 + " " + in3));
+                    }
+
+                    GoalManager.writeGoalData(in2, sum, -1);
                     System.out.println();
                     break;
                 }

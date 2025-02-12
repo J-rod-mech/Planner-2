@@ -2,7 +2,6 @@ package planner;
 
 public class Task {
     //constants
-    static final String FORMAT = "%s from %d to %d\nnote: %s\ncomplete: %b";
     
     private String name;
     private String tag;
@@ -68,9 +67,5 @@ public class Task {
 
     public void setTag(String tag) {
         this.tag = tag;
-    }
-
-    public String toString() {
-        return String.format(FORMAT, name, start, end, note, complete);
     }
 }
