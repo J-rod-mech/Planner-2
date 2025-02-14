@@ -1,6 +1,7 @@
 package planner;
 
 import java.util.Scanner;
+
 import java.util.ArrayList;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -8,9 +9,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.ResolverStyle;
 import java.io.File;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
-import java.time.DayOfWeek;
 
 public class Planner {
     //constants
@@ -83,7 +82,7 @@ public class Planner {
     final static String REPEAT_ERROR = "Tag %s already exists";
     final static String TAG_SUCCESS = "Tag %s added.";
     final static String TAG_ERROR = "Tag %s does not exist.";
-    final static String KEY_ERROR = "Keyword modification not allowed.";
+    final static String KEY_ERROR = "Cannot modify keyword %s.";
     final static String TAG_DEL_ERROR = "Tag %s does not exist.";
     final static String DAYS_ERROR = "Amount of days must be a positive integer.";
     final static String NOT_REM = "Nothing to remove.";
@@ -96,7 +95,7 @@ public class Planner {
     
     // custom parameters
     static String timeZone = "UTC-8";
-    static String directory = "G:\\My Drive\\Schedule Data";
+    static String directory = "G:/My Drive";
 
     static DateTimeFormatter myFormat = DateTimeFormatter.ofPattern("MM-dd-uuuu").withResolverStyle(ResolverStyle.STRICT);
     static String zonedDate = ZonedDateTime.now(ZoneId.of(timeZone)).format(myFormat);
@@ -313,7 +312,7 @@ public class Planner {
 
     public static void printList(String tag) {
         String list = "";
-        File dir = new File(directory + "\\daily");
+        File dir = new File(directory + "/plannerdata/daily");
         File[] directoryListing = dir.listFiles();
         Arrays.sort(directoryListing);
         if (directoryListing != null) {
@@ -376,6 +375,7 @@ public class Planner {
 
     public static void main(String[] args) {
         FileManager.readFile();
+        HabitManager.transferHabits();
         System.out.println(HELP_MENU);
         
         Scanner sc1 = new Scanner(System.in).useDelimiter(System.lineSeparator());
@@ -428,7 +428,10 @@ public class Planner {
                                 System.out.println();
                                 break;
                             }
-                            if (!TagManager.findTag(in2)) {
+                            if (in2.equals(KEY_TAG1) || in2.equals(KEY_TAG2)) {
+                                System.out.println(String.format(KEY_ERROR, in2));
+                            }
+                            else if (!TagManager.findTag(in2)) {
                                 TagManager.writeTagData(in2);
                                 System.out.println(String.format(TAG_SUCCESS, in2));
                             }
@@ -469,9 +472,15 @@ public class Planner {
                                     }
                                     try {
                                         freq = Integer.parseInt(sc3.next());
+                                        if (freq <= 0) {
+                                            System.out.println(DAYS_ERROR);
+                                            System.out.println();
+                                            sc3.close();
+                                            break;
+                                        }
                                     }
                                     catch (Exception e) {
-                                        System.out.println(COMMAND_ERROR);
+                                        System.out.println(DAYS_ERROR);
                                         System.out.println();
                                         sc3.close();
                                         break;
@@ -486,46 +495,20 @@ public class Planner {
                                 break;
                             }
                             else if (in3.toLowerCase().equals(KEY_TAG2)) {
-                                //TODO: habit functionality
                                 sc2.close();
                                 Scanner sc3 = null;
                                 try {
-                                    System.out.println("Set time slot for habit: ");
-
-                                    sc3 = new Scanner(sc1.next());
-                                    if (!sc3.hasNext()) {
-                                        sc3.close();
-                                        System.out.println(TIME_ERROR);
-                                        System.out.println();
-                                        break;
-                                    }
-                                    start = convertTime(sc3.next());
-
-                                    if (!sc3.hasNext()) {
-                                        sc3.close();
-                                        System.out.println(TIME_ERROR);
-                                        System.out.println();
-                                        break;
-                                    }
-                                    end = convertTime(sc3.next());
-
-                                    if (sc3.hasNext()) {
-                                        sc3.close();
-                                        System.out.println(TIME_ERROR);
-                                        System.out.println();
-                                        break;
-                                    }
-                                    sc3.close();
-                                    if (start < 0 || end < 0) {
-                                        System.out.println(TIME_ERROR);
-                                        System.out.println();
-                                        break;
-                                    }
-
                                     System.out.println("Set days for habit: ");
                                     sc3 = new Scanner(sc1.next());
                                     char sched[] = "0000000".toCharArray();
                                     boolean breakOut = false;
+
+                                    if (!sc3.hasNext()) {
+                                        System.out.println(COMMAND_ERROR);
+                                        System.out.println();
+                                        sc3.close();
+                                        break;
+                                    }
                                     while (sc3.hasNext()) {
                                         String weekday = sc3.next();
                                         if (inputEquals(weekday, "monday", 3)) {
@@ -586,7 +569,7 @@ public class Planner {
                                     sc3.close();
 
                                     HabitManager.addHabit(name, tag, new String(sched),
-                                            start, end, note);
+                                            MAX_HOUR - 1, MAX_HOUR, note);
                                     System.out.println();
                                 }
                                 catch (Exception e) {
@@ -661,7 +644,140 @@ public class Planner {
                         break;
                     }
 
-                    if (!TagManager.findTag(in3)) {
+                    if (in3.toLowerCase().equals(KEY_TAG1)) {
+                        sc2.close();
+                        Scanner sc3 = null;
+                        System.out.println("Set frequency for goal (days): ");
+                        int freq;
+                        try {
+                            sc3 = new Scanner(sc1.next()).useDelimiter(System.lineSeparator());
+                            if (!sc3.hasNext()) {
+                                System.out.println(COMMAND_ERROR);
+                                System.out.println();
+                                sc3.close();
+                                break;
+                            }
+                            try {
+                                freq = Integer.parseInt(sc3.next());
+                                if (freq <= 0) {
+                                    System.out.println(DAYS_ERROR);
+                                    System.out.println();
+                                    sc3.close();
+                                    break;
+                                }
+                            }
+                            catch (Exception e) {
+                                System.out.println(DAYS_ERROR);
+                                System.out.println();
+                                sc3.close();
+                                break;
+                            }
+                        }
+                        finally {
+                            if (sc3 != null) {
+                                sc3.close();
+                            }
+                        }
+                        GoalManager.writeGoalData(name, -1, freq);
+                        break;
+                    }
+                    else if (in3.toLowerCase().equals(KEY_TAG2)) {
+                        sc2.close();
+
+                        if (end <= start || start < 0) {
+                            System.out.println(TIME_ERROR);
+                            System.out.println();
+                            break;
+                        }
+
+                        Scanner sc3 = null;
+                        try {
+                            System.out.println("Set days for habit: ");
+                            sc3 = new Scanner(sc1.next());
+                            char sched[] = "0000000".toCharArray();
+                            boolean breakOut = false;
+
+                            if (!sc3.hasNext()) {
+                                System.out.println(COMMAND_ERROR);
+                                System.out.println();
+                                sc3.close();
+                                break;
+                            }
+                            while (sc3.hasNext()) {
+                                String weekday = sc3.next();
+                                if (inputEquals(weekday, "monday", 3)) {
+                                    sched[0] = '1';
+                                }
+                                else if (inputEquals(weekday, "tuesday", 3)) {
+                                    sched[1] = '1';
+                                }
+                                else if (inputEquals( weekday,"wednesday", 3)) {
+                                    sched[2] = '1';
+                                }
+                                else if (inputEquals(weekday, "thursday", 3)) {
+                                    sched[3] = '1';
+                                }
+                                else if (inputEquals(weekday, "friday", 3)) {
+                                    sched[4] = '1';
+                                }
+                                else if (inputEquals(weekday, "saturday", 3)) {
+                                    sched[5] = '1';
+                                }
+                                else if (inputEquals(weekday, "sunday", 3)) {
+                                    sched[6] = '1';
+                                }
+                                else {
+                                    sc3.close();
+                                    System.out.println(WEEKDAY_ERROR);
+                                    System.out.println();
+                                    breakOut = true;
+                                    break;
+                                }
+                            }
+                            if (breakOut)
+                                break;
+                            sc3.close();
+
+                            System.out.println("Set tag for habit (optional): ");
+                            sc3 = new Scanner(sc1.next());
+                            
+                            String tag = " ";
+                            if (sc3.hasNext()) {
+                                String temp = sc3.next();
+                                if (TagManager.findTag(temp)) {
+                                    tag = temp;
+                                }
+                                else {
+                                    System.out.println(String.format(TAG_ERROR, temp));
+                                    System.out.println();
+                                    break;
+                                }
+                            }
+                            sc3.close();
+
+                            System.out.println("Set note for habit (optional): ");
+                            sc3 = new Scanner(sc1.next()).useDelimiter(System.lineSeparator());
+                            String note = " ";
+                            if (sc3.hasNext())
+                                note = sc3.next();
+                            sc3.close();
+
+                            HabitManager.addHabit(name, tag, new String(sched),
+                                    start, end, note);
+                            System.out.println();
+                        }
+                        catch (Exception e) {
+                            e.printStackTrace();
+                            System.out.println(COMMAND_ERROR);
+                            System.out.println();
+                        }
+                        finally {
+                            if (sc3 != null) {
+                                sc3.close();
+                            }
+                        }
+                    }
+                    else if (!TagManager.findTag(in3)) {
                         System.out.println(String.format(TAG_ERROR, in3));
                         System.out.println();
                         break;
@@ -695,14 +811,25 @@ public class Planner {
                             break;
                         }
 
+                        int n = -1;
+                        String lTask = DELIM;
+                        
                         for (int i = 0; i < tasks.size(); i++) {
+                            if (tasks.get(i).getName().equals(lTask)) {
+                                n++;
+                            }
+                            else {
+                                n = 1;
+                            }
+                            lTask = tasks.get(i).getName();
+
                             if (tasks.get(i).getName().equals(in2)) {
                                 tasks.remove(i);
                                 i--;
+                                System.out.println(String.format(REM_SUCCESS, in2 + " " + n));
                             }
                         }
-
-                        System.out.println(String.format(REM_SUCCESS, in2));
+                        
                         System.out.println();
                         break;
                     }
@@ -728,7 +855,7 @@ public class Planner {
                         //rem <#> <tag>: removes tag
                         if (in2.equals("#")) {
                             if (in3.equals(KEY_TAG1) || in3.equals(KEY_TAG2)) {
-                                System.out.println(KEY_ERROR);
+                                System.out.println(String.format(KEY_ERROR, in3));
                             }
                             else {
                                 TagManager.removeTag(in3);
@@ -1309,8 +1436,6 @@ public class Planner {
 
                     break;
                 }
-                
-                //tick <task>: marks all instances of a task complete
                 else if (inputEquals(in1, "tick", 1)) {
                     if (!sc2.hasNext()) {
                         System.out.println(COMMAND_ERROR);
@@ -1321,28 +1446,41 @@ public class Planner {
                     String in2 = sc2.next();
 
                     int sum = 0;
+
+                    //tick <task>: marks all instances of a task complete
                     if (!sc2.hasNext()) {
+                        boolean found = false;
                         int idx = getTaskIdx(in2, "1");
                         if (idx == -1) {
                             System.out.println(String.format(TASK_ERROR, in2));
                             System.out.println();
                             break;
                         }
-                        Task task = tasks.get(idx);
-    
-                        if (task.isComplete()) {
+                        
+                        int n = -1;
+                        String lTask = DELIM;
+                        for (Task t : tasks) {
+                            if (t.getName().equals(lTask)) {
+                                n++;
+                            }
+                            else {
+                                n = 1;
+                            }
+                            lTask = t.getName();
+
+                            if (t.getName().equals(in2) && !t.isComplete()) {
+                                found = true;
+                                sum += t.getEnd() - t.getStart();
+                                t.tick();
+                                System.out.println(String.format(TICK_SUCCESS, in2 + " " + n));
+                            }
+                        }
+
+                        if (!found) {
                             System.out.println(String.format(TICK_ERROR, in2));
                             System.out.println();
                             break;
                         }
-                        
-                        for (Task t : tasks) {
-                            if (t.getName().equals(in2)) {
-                                sum += t.getEnd() - t.getStart();
-                                t.tick();
-                            }
-                        }
-                        System.out.println(String.format(TICK_SUCCESS, in2));
                     }
 
                     //tick <task> <instace>: marks instance n of a task complete
@@ -1364,7 +1502,7 @@ public class Planner {
                         Task task = tasks.get(idx);
     
                         if (task.isComplete()) {
-                            System.out.println(String.format(TICK_ERROR, in2));
+                            System.out.println(String.format(TICK_ERROR, in2 + " " + in3));
                             System.out.println();
                             break;
                         }

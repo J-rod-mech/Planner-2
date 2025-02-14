@@ -6,12 +6,11 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Scanner;
 import static planner.Planner.directory;
-import static planner.Planner.DELIM;
-import static planner.Planner.timeZone;
 import static planner.Planner.myFormat;
+import static planner.Planner.timeZone;
+import static planner.Planner.DELIM;
 import static planner.Planner.HALF_HOURS;
 import static planner.Planner.HOUR_OFFSET;
 import static planner.Planner.FIFTEEN_DIV;
@@ -27,7 +26,7 @@ public class HabitManager {
     final static String DEL_ERROR = "Habit %s does not exist.";
 
     public static void printHabitData() {
-        File myObj = new File(directory + "\\habitdata.txt");
+        File myObj = new File(directory + "/plannerdata/habitdata.txt");
         Scanner fileSC = null;
         try {
             fileSC = new Scanner(myObj).useDelimiter(DELIM);
@@ -112,7 +111,7 @@ public class HabitManager {
     public static void addHabit(String task, String tag, String sched,
             int start, int end, String note) {
         String out = "";
-        File myObj = new File(directory + "\\habitdata.txt");
+        File myObj = new File(directory + "/plannerdata/habitdata.txt");
         Scanner fileSC = null;
         
         try {
@@ -132,7 +131,7 @@ public class HabitManager {
         }
         
         try {
-            FileWriter myWriter = new FileWriter(directory + "\\habitdata.txt");
+            FileWriter myWriter = new FileWriter(directory + "/plannerdata/habitdata.txt");
             myWriter.write(out);
             myWriter.close();
         } catch (IOException e) {
@@ -143,7 +142,7 @@ public class HabitManager {
 
     public static void removeHabit(String task) {
         String out = "";
-        File myObj = new File(directory + "\\habitdata.txt");
+        File myObj = new File(directory + "/plannerdata/habitdata.txt");
         Scanner fileSC = null;
         boolean found = false;
 
@@ -178,7 +177,7 @@ public class HabitManager {
         }
         
         try {
-            FileWriter myWriter = new FileWriter(directory + "\\habitdata.txt");
+            FileWriter myWriter = new FileWriter(directory + "/plannerdata/habitdata.txt");
             myWriter.write(out);
             myWriter.close();
         } catch (IOException e) {
@@ -189,5 +188,63 @@ public class HabitManager {
             System.out.println(String.format(DEL_SUCCESS, task));
         else
             System.out.println(String.format(DEL_ERROR, task));
+    }
+
+    public static void transferHabits() {
+        String out = "";
+        File myObj = new File(directory + "/plannerdata/habitdata.txt");
+        Scanner fileSC = null;
+        String date = "NOT FOUND";
+        LocalDate now = ZonedDateTime.now(ZoneId.of(timeZone)).toLocalDate();
+
+        try {
+            fileSC = new Scanner(myObj).useDelimiter(DELIM);
+
+            if (fileSC.hasNext()) {
+                date = fileSC.next().substring(0, 10);
+            }
+            
+            if (!LocalDate.parse(date, myFormat).isBefore(now)) {
+                return;
+            }
+
+            out += now.format(myFormat);
+
+            while (fileSC.hasNext()) {
+                String habit = fileSC.next();
+                String tag = fileSC.next();
+                String sched = fileSC.next();
+                int start = Integer.parseInt(fileSC.next());
+                int end = Integer.parseInt(fileSC.next());
+                String note = fileSC.next();
+                if (fileSC.hasNext()) {
+                    fileSC.next();
+                }
+                
+                for (int i = 0; i < weekDays.length; i++) {
+                    if (sched.charAt(i) == '1' && now.getDayOfWeek().toString().
+                            equals(weekDays[i].toUpperCase())) {
+                        Planner.insertTask(new Task(habit, tag, false, start, end, note));
+                    }
+                }
+
+                out += "\n" + DELIM + habit + DELIM + tag + DELIM + sched +
+                        DELIM + start + DELIM + end + DELIM + note + DELIM;
+            }
+        }
+        catch (Exception e) {
+            out += now.format(myFormat);
+        }
+        finally {
+            if (fileSC != null) fileSC.close();
+        }
+        
+        try {
+            FileWriter myWriter = new FileWriter(directory + "/plannerdata/habitdata.txt");
+            myWriter.write(out);
+            myWriter.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -12,7 +12,7 @@ import static planner.Planner.DELIM;
 public class FileManager {
     public static void readFile() {
         Planner.tasks = new ArrayList<Task>();
-        File myObj = new File(directory + "\\daily\\taskdata_" + Planner.zonedDate + ".txt");
+        File myObj = new File(directory + "/plannerdata/daily/taskdata_" + Planner.zonedDate + ".txt");
         try {
             Scanner fileSC = new Scanner(myObj).useDelimiter("\n");
             while (fileSC.hasNext()) {
@@ -34,7 +34,7 @@ public class FileManager {
     
     public static void writeFile() {
         try {
-            FileWriter myWriter = new FileWriter(directory + "\\daily\\taskdata_" + Planner.zonedDate + ".txt");
+            FileWriter myWriter = new FileWriter(directory + "/plannerdata/daily/taskdata_" + Planner.zonedDate + ".txt");
             String out = "";
             for (Task t : Planner.tasks) {
                 out += "\n";

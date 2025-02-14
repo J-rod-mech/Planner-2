@@ -20,7 +20,7 @@ public class GoalManager {
     final static String DEL_ERROR = "Goal %s does not exist.";
 
     public static void printGoalData() {
-        File myObj = new File(directory + "\\goaldata.txt");
+        File myObj = new File(directory + "/plannerdata/goaldata.txt");
         Scanner fileSC = null;
         Scanner taskSC = null;
         try {
@@ -55,7 +55,7 @@ public class GoalManager {
             }
         }
         catch (Exception e) {
-            e.printStackTrace();
+            //ignore
         }
         finally {
             if (fileSC != null) fileSC.close();
@@ -65,7 +65,7 @@ public class GoalManager {
 
     public static void writeGoalData(String task, int newVal, int nFreq) {
         String out = "";
-        File myObj = new File(directory + "\\goaldata.txt");
+        File myObj = new File(directory + "/plannerdata/goaldata.txt");
         Scanner fileSC = null;
         Scanner taskSC = null;
         
@@ -125,7 +125,9 @@ public class GoalManager {
                 System.out.println();
             }
             catch (Exception e2) {
-                e2.printStackTrace();
+                out += "##" + task + "## " + nFreq + " 01-01-0001 0 0 0";
+                System.out.println(String.format(GOAL_SUCCESS, task));
+                System.out.println();
             }
         }
         finally {
@@ -134,7 +136,7 @@ public class GoalManager {
         }
         
         try {
-            FileWriter myWriter = new FileWriter(directory + "\\goaldata.txt");
+            FileWriter myWriter = new FileWriter(directory + "/plannerdata/goaldata.txt");
             myWriter.write(out);
             myWriter.close();
         } catch (IOException e) {
@@ -144,7 +146,7 @@ public class GoalManager {
 
     public static void removeGoal(String task) {
         String out = "";
-        File myObj = new File(directory + "\\goaldata.txt");
+        File myObj = new File(directory + "/plannerdata/goaldata.txt");
         Scanner fileSC = null;
         boolean del = false;
 
@@ -162,11 +164,11 @@ public class GoalManager {
             }
         }
         catch (Exception e) {
-            e.printStackTrace();
+            //ignore
         }
 
         try {
-            FileWriter myWriter = new FileWriter(directory + "\\goaldata.txt");
+            FileWriter myWriter = new FileWriter(directory + "/plannerdata/goaldata.txt");
             myWriter.write(out);
             myWriter.close();
         } catch (IOException e) {
