@@ -148,7 +148,7 @@ public class HabitManager {
 
         try {
             fileSC = new Scanner(myObj).useDelimiter(DELIM);
-            out += fileSC.next();
+            out += fileSC.nextLine();
             while (fileSC.hasNext()) {
                 String first = fileSC.next();
                 if (first.equals(task)) {
@@ -160,12 +160,14 @@ public class HabitManager {
                         fileSC.next();
                 }
                 else {
-                    out += DELIM + first;
+                    out += "\n" + DELIM + first;
                     for (int i = 0; i < 5; i++) {
                         out += DELIM + fileSC.next();
                     }
-                    if (fileSC.hasNext())
-                        out += DELIM + fileSC.next();
+                    if (fileSC.hasNext()) {
+                        fileSC.next();
+                        out += DELIM;
+                    }
                 }
             }
         }

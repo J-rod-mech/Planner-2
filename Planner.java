@@ -776,6 +776,7 @@ public class Planner {
                                 sc3.close();
                             }
                         }
+                        break;
                     }
                     else if (!TagManager.findTag(in3)) {
                         System.out.println(String.format(TAG_ERROR, in3));
