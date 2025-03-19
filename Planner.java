@@ -684,6 +684,9 @@ public class Planner {
                     else if (in3.toLowerCase().equals(KEY_TAG2)) {
                         sc2.close();
 
+                        if (end == 0) {
+                            end = MAX_HOUR;
+                        }
                         if (end <= start || start < 0) {
                             System.out.println(TIME_ERROR);
                             System.out.println();
@@ -784,6 +787,9 @@ public class Planner {
                         break;
                     }
 
+                    if (end == 0) {
+                        end = MAX_HOUR;
+                    }
                     if (end > start && start >= 0) {
                         insertTask(name, in3, start, end);
                         System.out.println(String.format(ADD_SUCCESS, name));
@@ -847,9 +853,7 @@ public class Planner {
                         int start = convertTime(in2);
                         int end = convertTime(in3);
     
-                        int len = in3.length();
-                        if (len > 1 && in3.substring(len - 2).toLowerCase().
-                                equals("am") && end == 0) {
+                        if (end == 0) {
                             end = MAX_HOUR;
                         }
     
