@@ -94,7 +94,7 @@ public class Planner {
     final static String KEY_TAG2 = "habit";
     
     // custom parameters
-    static String timeZone = "UTC-8";
+    static String timeZone = "UTC-7";
     static String directory = "G:/My Drive";
 
     static DateTimeFormatter myFormat = DateTimeFormatter.ofPattern("MM-dd-uuuu").withResolverStyle(ResolverStyle.STRICT);
@@ -204,40 +204,43 @@ public class Planner {
     }
 
     public static void insertTask(String name, String tag, int start, int end) {
-        for (int i = 0; i < tasks.size(); i++) {
-            if (tasks.get(i).getName().equals(name)) {
-                if (start < tasks.get(i).getStart()) {
-                    tasks.add(i, new Task(name, tag, start, end));
-                    return;
-                }
-                else if (i == tasks.size() - 1 ||
-                        !tasks.get(i + 1).getName().equals(name)) {
-                    tasks.add(i + 1, new Task(name, tag, start, end));
-                    return;
-                }
+        int lo = 0;
+        int hi = tasks.size() - 1;
+        while (lo < hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (tasks.get(mid).getStart() > start) {
+                hi = mid;
+            }
+            else if (tasks.get(mid).getStart() <= start) {
+                lo = mid + 1;
             }
         }
-        tasks.add(new Task(name, tag, start, end));
+        if (lo < tasks.size() && tasks.get(lo).getStart() <= start) {
+            lo++;
+        }
+        tasks.add(lo, new Task(name, tag, start, end));
     }
 
     public static void insertTask(Task task) {
-        for (int i = 0; i < tasks.size(); i++) {
-            if (tasks.get(i).getName().equals(task.getName())) {
-                if (task.getStart() < tasks.get(i).getStart()) {
-                    tasks.add(i, task);
-                    return;
-                }
-                else if (i == tasks.size() - 1 ||
-                        !tasks.get(i + 1).getName().equals(task.getName())) {
-                    tasks.add(i + 1, task);
-                    return;
-                }
+        
+        int lo = 0;
+        int hi = tasks.size() - 1;
+        while (lo < hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (tasks.get(mid).getStart() > task.getStart()) {
+                hi = mid;
+            }
+            else if (tasks.get(mid).getStart() <= task.getStart()) {
+                lo = mid + 1;
             }
         }
-        tasks.add(task);
+        if (lo < tasks.size() && tasks.get(lo).getStart() <= task.getStart()) {
+            lo++;
+        }
+        tasks.add(lo, task);
     }
 
-    public static void changeTaskPriority(int idx, int newStart, int newEnd) {
+    public static void moveTask(int idx, int newStart, int newEnd) {
         Task task = tasks.get(idx);
         
         String name = task.getName();
@@ -246,20 +249,21 @@ public class Planner {
         String note = task.getNote();
 
         tasks.remove(idx);
-        for (int i = 0; i < tasks.size(); i++) {
-            if (tasks.get(i).getName().equals(name)) {
-                if (newStart <= tasks.get(i).getStart()) {
-                    tasks.add(i, new Task(name, tag, complete, newStart, newEnd, note));
-                    return;
-                }
-                else if (i == tasks.size() - 1 ||
-                        !tasks.get(i + 1).getName().equals(name)) {
-                    tasks.add(i + 1, new Task(name, tag, complete, newStart, newEnd, note));
-                    return;
-                }
+        int lo = 0;
+        int hi = tasks.size() - 1;
+        while (lo < hi) {
+            int mid = lo + (hi - lo) / 2;
+            if (tasks.get(mid).getStart() > newStart) {
+                hi = mid;
+            }
+            else if (tasks.get(mid).getStart() <= newStart) {
+                lo = mid + 1;
             }
         }
-        tasks.add(new Task(name, tag, complete, newStart, newEnd, note));
+        if (tasks.get(lo).getStart() <= newStart) {
+            lo++;
+        }
+        tasks.add(lo, new Task(name, tag, complete, newStart, newEnd, note));
     }
 
     public static void printSchedule() {
@@ -395,7 +399,12 @@ public class Planner {
                     break;
                 }
                 String in1 = sc2.next();
-                if (inputEquals(in1, "add", 1)) {
+                if (inputEquals(in1, "p", 1)) {
+                    for (Task t : tasks) {
+                        System.out.println(t.getName() + " " + t.getStart());
+                    }
+                }
+                else if (inputEquals(in1, "add", 1)) {
                     if (!sc2.hasNext()) {
                         System.out.println(COMMAND_ERROR);
                         System.out.println();
@@ -1223,21 +1232,33 @@ public class Planner {
                             break;
                         }
 
+                        ArrayList<Task> movedTasks = new ArrayList<>();
+                        ArrayList<Integer> taskNs = new ArrayList<>();
                         int n = 1;
-                        for (Task t : tasks) {
-                            if (t.getName().equals(in2)) {
-                                if (t.getStart() + s < MIN_HOUR ||
-                                        t.getEnd() + s > MAX_HOUR) {
+                        for (int i = 0; i < tasks.size(); i++) {
+                            if (tasks.get(i).getName().equals(in2)) {
+                                if (tasks.get(i).getStart() + s < MIN_HOUR ||
+                                        tasks.get(i).getEnd() + s > MAX_HOUR) {
                                     System.out.println(String.format(BOUND_ERROR, in2 + " " + n));
                                 }
                                 else {
-                                    t.setTime(t.getStart() + s, t.getEnd() + s);
-                                    System.out.println(String.format(MOVE_SUCCESS, in2 + " " + n));
+                                    movedTasks.add(tasks.get(i));
+                                    taskNs.add(n);
+                                    tasks.remove(i);
+                                    i--;
                                 }
                                 n++;
                             }
                         }
-                        
+
+                        int i = 0;
+                        for (Task t : movedTasks) {
+                            insertTask(new Task(t.getName(), t.getTag(),
+                                    t.isComplete(), t.getStart() + s,
+                                    t.getEnd() + s, t.getNote()));
+                            System.out.println(String.format(MOVE_SUCCESS, t.getName() + " " + taskNs.get(i)));
+                            i++;
+                        }
                         
                         System.out.println();
                     }
@@ -1273,7 +1294,7 @@ public class Planner {
                             //move <task> <instance> <start> <end>: moves instance n of a task to time slot
                             if (start >= 0) {
                                 if (end > start) {
-                                    changeTaskPriority(idx, start, end);
+                                    moveTask(idx, start, end);
                                     System.out.println(String.format(MOVE_SUCCESS, in2 + " " + in3));
                                 }
                                 else {
@@ -1298,7 +1319,7 @@ public class Planner {
                                     System.out.println(String.format(BOUND_ERROR, in2 + " " + in3));
                                 }
                                 else {
-                                    changeTaskPriority(idx, task.getStart() + s, task.getEnd() + s);
+                                    moveTask(idx, task.getStart() + s, task.getEnd() + s);
                                     System.out.println(String.format(MOVE_SUCCESS, in2 + " " + in3));
                                 }
                             }
@@ -1310,7 +1331,7 @@ public class Planner {
                         }
                         
                         //move <start> <end> <+/-> <time>: shifts time slot
-                        else if (bStart >= 0){
+                        else if (bStart >= 0) {
                             if (bEnd < bStart) {
                                 System.out.println(TIME_ERROR);
                             }

@@ -43,8 +43,8 @@ public class GoalManager {
                 else {
                     System.out.println(0);
                 }
-                System.out.println("Longest streak: " + taskSC.next());
-                System.out.println("Hours completed: " + Double.parseDouble(taskSC.next()) / 4);
+                //System.out.println("Longest streak: " + taskSC.next());
+                //System.out.println("Hours completed: " + Double.parseDouble(taskSC.next()) / 4);
                 if (!date.equals("01-01-0001")) {
                     System.out.println("Last completed: " + date);
                 }
