@@ -260,7 +260,7 @@ public class Planner {
                 lo = mid + 1;
             }
         }
-        if (tasks.get(lo).getStart() <= newStart) {
+        if (lo < tasks.size() && tasks.get(lo).getStart() <= newStart) {
             lo++;
         }
         tasks.add(lo, new Task(name, tag, complete, newStart, newEnd, note));
@@ -399,12 +399,7 @@ public class Planner {
                     break;
                 }
                 String in1 = sc2.next();
-                if (inputEquals(in1, "p", 1)) {
-                    for (Task t : tasks) {
-                        System.out.println(t.getName() + " " + t.getStart());
-                    }
-                }
-                else if (inputEquals(in1, "add", 1)) {
+                if (inputEquals(in1, "add", 1)) {
                     if (!sc2.hasNext()) {
                         System.out.println(COMMAND_ERROR);
                         System.out.println();
