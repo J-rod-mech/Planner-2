@@ -20,7 +20,7 @@ public class GoalManager {
     final static String DEL_ERROR = "Goal %s does not exist.";
 
     public static void printGoalData() {
-        File myObj = new File(directory + "/plannerdata/goaldata.txt");
+        File myObj = new File(directory + "/plannerdata2/goaldata.txt");
         Scanner fileSC = null;
         Scanner taskSC = null;
         try {
@@ -43,7 +43,7 @@ public class GoalManager {
                 else {
                     System.out.println(0);
                 }
-                //System.out.println("Longest streak: " + taskSC.next());
+                System.out.println("Longest streak: " + taskSC.next());
                 //System.out.println("Hours completed: " + Double.parseDouble(taskSC.next()) / 4);
                 if (!date.equals("01-01-0001")) {
                     System.out.println("Last completed: " + date);
@@ -65,7 +65,7 @@ public class GoalManager {
 
     public static void writeGoalData(String task, int newVal, int nFreq) {
         String out = "";
-        File myObj = new File(directory + "/plannerdata/goaldata.txt");
+        File myObj = new File(directory + "/plannerdata2/goaldata.txt");
         Scanner fileSC = null;
         Scanner taskSC = null;
         
@@ -136,7 +136,7 @@ public class GoalManager {
         }
         
         try {
-            FileWriter myWriter = new FileWriter(directory + "/plannerdata/goaldata.txt");
+            FileWriter myWriter = new FileWriter(directory + "/plannerdata2/goaldata.txt");
             myWriter.write(out);
             myWriter.close();
         } catch (IOException e) {
@@ -146,7 +146,7 @@ public class GoalManager {
 
     public static void removeGoal(String task) {
         String out = "";
-        File myObj = new File(directory + "/plannerdata/goaldata.txt");
+        File myObj = new File(directory + "/plannerdata2/goaldata.txt");
         Scanner fileSC = null;
         boolean del = false;
 
@@ -168,7 +168,7 @@ public class GoalManager {
         }
 
         try {
-            FileWriter myWriter = new FileWriter(directory + "/plannerdata/goaldata.txt");
+            FileWriter myWriter = new FileWriter(directory + "/plannerdata2/goaldata.txt");
             myWriter.write(out);
             myWriter.close();
         } catch (IOException e) {

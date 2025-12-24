@@ -13,7 +13,7 @@ public class TagManager {
     final static String DEL_ERROR = "Tag %s does not exist.";
     
     public static boolean findTag(String tag) {
-        File myObj = new File(directory + "/plannerdata/tagdata.txt");
+        File myObj = new File(directory + "/plannerdata2/tagdata.txt");
         Scanner fileSC = null;
 
         try {
@@ -36,7 +36,7 @@ public class TagManager {
     }
     
     public static void printTagData() {
-        File myObj = new File(directory + "/plannerdata/tagdata.txt");
+        File myObj = new File(directory + "/plannerdata2/tagdata.txt");
         Scanner fileSC = null;
 
         try {
@@ -58,7 +58,7 @@ public class TagManager {
 
     public static void writeTagData(String tag) {
         String out = "";
-        File myObj = new File(directory + "/plannerdata/tagdata.txt");
+        File myObj = new File(directory + "/plannerdata2/tagdata.txt");
         Scanner fileSC = null;
 
         try {
@@ -83,7 +83,7 @@ public class TagManager {
         }
 
         try {
-            FileWriter myWriter = new FileWriter(directory + "/plannerdata/tagdata.txt");
+            FileWriter myWriter = new FileWriter(directory + "/plannerdata2/tagdata.txt");
             myWriter.write(out);
             myWriter.close();
         } catch (IOException e) {
@@ -93,7 +93,7 @@ public class TagManager {
 
     public static void removeTag(String tag) {
         String out = "";
-        File myObj = new File(directory + "/plannerdata/tagdata.txt");
+        File myObj = new File(directory + "/plannerdata2/tagdata.txt");
         Scanner fileSC = null;
         boolean del = false;
 
@@ -118,7 +118,7 @@ public class TagManager {
         }
 
         try {
-            FileWriter myWriter = new FileWriter(directory + "/plannerdata/tagdata.txt");
+            FileWriter myWriter = new FileWriter(directory + "/plannerdata2/tagdata.txt");
             myWriter.write(out);
             myWriter.close();
         } catch (IOException e) {

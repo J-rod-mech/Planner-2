@@ -17,6 +17,7 @@ import static planner.Planner.FIFTEEN_DIV;
 import static planner.Planner.HOUR_DIV;
 import static planner.Planner.QUAD;
 import static planner.Planner.MAX_HOUR;
+import static planner.Planner.HALF_DIV;
 
 public class HabitManager {
     final static String[] weekDays = {"Monday", "Tuesday", "Wednesday",
@@ -26,7 +27,7 @@ public class HabitManager {
     final static String DEL_ERROR = "Habit %s does not exist.";
 
     public static void printHabitData() {
-        File myObj = new File(directory + "/plannerdata/habitdata.txt");
+        File myObj = new File(directory + "/plannerdata2/habitdata.txt");
         Scanner fileSC = null;
         try {
             fileSC = new Scanner(myObj).useDelimiter(DELIM);
@@ -46,20 +47,16 @@ public class HabitManager {
                 System.out.println(":");
 
                 System.out.print("From ");
-                System.out.print((HALF_HOURS - (HOUR_OFFSET + MAX_HOUR - start) / QUAD
-                        % HALF_HOURS) + ":" + (start * FIFTEEN_DIV % HOUR_DIV));
-                if (start % QUAD == 0)
-                    System.out.print("0");
-                if (start / HALF_HOURS / QUAD % 2 == 0)
+                System.out.print((HALF_HOURS - (HOUR_DIV + MAX_HOUR - start) / HOUR_DIV
+                        % HALF_HOURS) + ":" + String.format("%02d", start % HOUR_DIV));
+                if (start < MAX_HOUR / HALF_DIV)
                     System.out.print(" A");
                 else
                     System.out.print(" P");
                 System.out.print("M to ");
-                System.out.print((HALF_HOURS - (HOUR_OFFSET + MAX_HOUR - end) / QUAD
-                        % HALF_HOURS) + ":" + (end * FIFTEEN_DIV % HOUR_DIV));
-                if (end % QUAD == 0)
-                    System.out.print("0");
-                if (end / HALF_HOURS / QUAD % 2 == 0)
+                System.out.print((HALF_HOURS - (HOUR_DIV + MAX_HOUR - end) / HOUR_DIV
+                        % HALF_HOURS) + ":" + String.format("%02d", end % HOUR_DIV));
+                if (end < MAX_HOUR / HALF_DIV)
                     System.out.print(" A");
                 else
                     System.out.print(" P");
@@ -77,7 +74,7 @@ public class HabitManager {
                         if (count > 1 && (i == weekDays.length - 1 || Integer.parseInt(sched.substring(i + 1)) == 0))
                             System.out.print("and ");
 
-                        System.out.print(weekDays[i]);
+                        System.out.print(weekDays[i].substring(0, 3).toLowerCase());
                         if (i < weekDays.length - 1) {
                             if (count > 2 && Integer.parseInt(sched.substring(i + 1)) != 0) {
                                 System.out.print(",");
@@ -111,7 +108,7 @@ public class HabitManager {
     public static void addHabit(String task, String tag, String sched,
             int start, int end, String note) {
         String out = "";
-        File myObj = new File(directory + "/plannerdata/habitdata.txt");
+        File myObj = new File(directory + "/plannerdata2/habitdata.txt");
         Scanner fileSC = null;
         
         try {
@@ -131,7 +128,7 @@ public class HabitManager {
         }
         
         try {
-            FileWriter myWriter = new FileWriter(directory + "/plannerdata/habitdata.txt");
+            FileWriter myWriter = new FileWriter(directory + "/plannerdata2/habitdata.txt");
             myWriter.write(out);
             myWriter.close();
         } catch (IOException e) {
@@ -142,7 +139,7 @@ public class HabitManager {
 
     public static void removeHabit(String task) {
         String out = "";
-        File myObj = new File(directory + "/plannerdata/habitdata.txt");
+        File myObj = new File(directory + "/plannerdata2/habitdata.txt");
         Scanner fileSC = null;
         boolean found = false;
 
@@ -166,8 +163,8 @@ public class HabitManager {
                     }
                     if (fileSC.hasNext()) {
                         fileSC.next();
-                        out += DELIM;
                     }
+                    out += DELIM;
                 }
             }
         }
@@ -179,7 +176,7 @@ public class HabitManager {
         }
         
         try {
-            FileWriter myWriter = new FileWriter(directory + "/plannerdata/habitdata.txt");
+            FileWriter myWriter = new FileWriter(directory + "/plannerdata2/habitdata.txt");
             myWriter.write(out);
             myWriter.close();
         } catch (IOException e) {
@@ -194,7 +191,7 @@ public class HabitManager {
 
     public static void transferHabits() {
         String out = "";
-        File myObj = new File(directory + "/plannerdata/habitdata.txt");
+        File myObj = new File(directory + "/plannerdata2/habitdata.txt");
         Scanner fileSC = null;
         String date = "NOT FOUND";
         LocalDate now = ZonedDateTime.now(ZoneId.of(timeZone)).toLocalDate();
@@ -242,7 +239,7 @@ public class HabitManager {
         }
         
         try {
-            FileWriter myWriter = new FileWriter(directory + "/plannerdata/habitdata.txt");
+            FileWriter myWriter = new FileWriter(directory + "/plannerdata2/habitdata.txt");
             myWriter.write(out);
             myWriter.close();
         } catch (IOException e) {
