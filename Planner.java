@@ -98,7 +98,7 @@ public class Planner {
     
     // custom parameters
     static String timeZone = "UTC-7";
-    static String directory = /* enter directory here */;
+    static String directory = "/* enter directory here */";
 
     static DateTimeFormatter myFormat = DateTimeFormatter.ofPattern("MM-dd-uuuu").withResolverStyle(ResolverStyle.STRICT);
     static String zonedDate = ZonedDateTime.now(ZoneId.of(timeZone)).format(myFormat);
