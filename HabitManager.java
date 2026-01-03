@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Scanner;
+<<<<<<< HEAD
 import static planner.Planner.DELIM;
 import static planner.Planner.HALF_DIV;
 import static planner.Planner.HALF_HOURS;
@@ -15,6 +16,19 @@ import static planner.Planner.MAX_HOUR;
 import static planner.Planner.directory;
 import static planner.Planner.myFormat;
 import static planner.Planner.timeZone;
+=======
+import static planner.Planner.directory;
+import static planner.Planner.myFormat;
+import static planner.Planner.timeZone;
+import static planner.Planner.DELIM;
+import static planner.Planner.HALF_HOURS;
+import static planner.Planner.HOUR_OFFSET;
+import static planner.Planner.FIFTEEN_DIV;
+import static planner.Planner.HOUR_DIV;
+import static planner.Planner.QUAD;
+import static planner.Planner.MAX_HOUR;
+import static planner.Planner.HALF_DIV;
+>>>>>>> f783ad6b70443919f7eac5db2b78a6e748d2b2fa
 
 public class HabitManager {
     final static String[] weekDays = {"Monday", "Tuesday", "Wednesday",
@@ -24,7 +38,11 @@ public class HabitManager {
     final static String DEL_ERROR = "Habit %s does not exist.";
 
     public static void printHabitData() {
+<<<<<<< HEAD
         File myObj = new File(directory + "/habitdata.txt");
+=======
+        File myObj = new File(directory + "/plannerdata2/habitdata.txt");
+>>>>>>> f783ad6b70443919f7eac5db2b78a6e748d2b2fa
         Scanner fileSC = null;
         try {
             fileSC = new Scanner(myObj).useDelimiter(DELIM);
@@ -105,7 +123,11 @@ public class HabitManager {
     public static void addHabit(String task, String tag, String sched,
             int start, int end, String note) {
         String out = "";
+<<<<<<< HEAD
         File myObj = new File(directory + "/habitdata.txt");
+=======
+        File myObj = new File(directory + "/plannerdata2/habitdata.txt");
+>>>>>>> f783ad6b70443919f7eac5db2b78a6e748d2b2fa
         Scanner fileSC = null;
         
         try {
@@ -125,7 +147,11 @@ public class HabitManager {
         }
         
         try {
+<<<<<<< HEAD
             FileWriter myWriter = new FileWriter(directory + "/habitdata.txt");
+=======
+            FileWriter myWriter = new FileWriter(directory + "/plannerdata2/habitdata.txt");
+>>>>>>> f783ad6b70443919f7eac5db2b78a6e748d2b2fa
             myWriter.write(out);
             myWriter.close();
         } catch (IOException e) {
@@ -136,7 +162,11 @@ public class HabitManager {
 
     public static void removeHabit(String task) {
         String out = "";
+<<<<<<< HEAD
         File myObj = new File(directory + "/habitdata.txt");
+=======
+        File myObj = new File(directory + "/plannerdata2/habitdata.txt");
+>>>>>>> f783ad6b70443919f7eac5db2b78a6e748d2b2fa
         Scanner fileSC = null;
         boolean found = false;
 
@@ -173,7 +203,11 @@ public class HabitManager {
         }
         
         try {
+<<<<<<< HEAD
             FileWriter myWriter = new FileWriter(directory + "/habitdata.txt");
+=======
+            FileWriter myWriter = new FileWriter(directory + "/plannerdata2/habitdata.txt");
+>>>>>>> f783ad6b70443919f7eac5db2b78a6e748d2b2fa
             myWriter.write(out);
             myWriter.close();
         } catch (IOException e) {
@@ -188,7 +222,11 @@ public class HabitManager {
 
     public static void transferHabits() {
         String out = "";
+<<<<<<< HEAD
         File myObj = new File(directory + "/habitdata.txt");
+=======
+        File myObj = new File(directory + "/plannerdata2/habitdata.txt");
+>>>>>>> f783ad6b70443919f7eac5db2b78a6e748d2b2fa
         Scanner fileSC = null;
         String date = "NOT FOUND";
         LocalDate now = ZonedDateTime.now(ZoneId.of(timeZone)).toLocalDate();
@@ -236,7 +274,11 @@ public class HabitManager {
         }
         
         try {
+<<<<<<< HEAD
             FileWriter myWriter = new FileWriter(directory + "/habitdata.txt");
+=======
+            FileWriter myWriter = new FileWriter(directory + "/plannerdata2/habitdata.txt");
+>>>>>>> f783ad6b70443919f7eac5db2b78a6e748d2b2fa
             myWriter.write(out);
             myWriter.close();
         } catch (IOException e) {
